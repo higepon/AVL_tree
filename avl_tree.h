@@ -169,7 +169,7 @@ template <class KeyType, class ValueType> class AVLTree {
         Balance(parent);
       } else if (parent->label == kR) {
         if (n->label == kR) {
-          // left lotation
+          // left rotation
           Node* parent_parent = parent->parent;
           Node* old_root = parent;
           Node* new_root = n;
@@ -190,6 +190,35 @@ template <class KeyType, class ValueType> class AVLTree {
               old_root->parent = new_root;
             }
           }
+        } else if (n->label == kL) {
+          // double right rotation
+          Node* old_root_parent = parent->parent;
+          Node* old_root = parent;
+          Node* new_root = n->left;
+          old_root->label = kE;
+          new_root->label = kE;
+          n->label = kR;
+          Node* save_n_left_left = n->left->left;
+          n->left = new_root->right;
+          n->parent = new_root;
+          new_root->right = n;
+          new_root->left = old_root;
+          old_root->right = save_n_left_left;
+          old_root->parent = new_root->parent;
+          if (old_root_parent == NULL) {
+            root_ = new_root;
+            new_root->parent = NULL;
+          } else {
+            if (old_root->IsRightChild()) {
+              old_root_parent->right = new_root;
+              new_root->parent = old_root_parent;
+            } else {
+              old_root_parent->left = new_root;
+              new_root->parent = old_root_parent;
+            }
+          }
+        } else {
+          assert(0);
         }
       } else if (parent->label == kL) {
         parent->label = kE;
