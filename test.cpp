@@ -119,27 +119,27 @@ TEST_F(AVLTreeTest, DoubleRightRotation) {
   EXPECT_EQ(10, tree_.Root()->right->right->key);
   EXPECT_EQ(IntAVLTree::kE, tree_.Root()->right->right->label);
 
-  // Node* root = tree_.Root();
-  // EXPECT_EQ(IntAVLTree::kR, root->label);
-  // EXPECT_EQ(5, root->key);
-  // Node* left = root->left;
-  // ASSERT_TRUE(left != NULL);
-  // EXPECT_EQ(3, left->key);
-  // EXPECT_EQ(IntAVLTree::kE, left->label);
+  // double right rotation
+  tree_.Add(6, 6);
+  EXPECT_EQ(7, tree_.Root()->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->label);
 
-  // Node* right = root->right;
-  // ASSERT_TRUE(right != NULL);
-  // EXPECT_EQ(9, right->key);
-  // EXPECT_EQ(IntAVLTree::kE, right->label);
-  // ASSERT_TRUE(right->left != NULL);
-  // EXPECT_EQ(7, right->left->key);
-  // EXPECT_EQ(IntAVLTree::kE, right->left->label);
-  // ASSERT_TRUE(right->right != NULL);
-  // EXPECT_EQ(7, right->right->key);
-  // EXPECT_EQ(IntAVLTree::kE, right->right->label);
+  EXPECT_EQ(5, tree_.Root()->left->key);
+  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->left->label);
 
-  // kokomade setup
-  // kokode  6 を入れると DoubleRightRotation になるはず
+  EXPECT_EQ(3, tree_.Root()->left->left->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->left->label);
+
+  EXPECT_EQ(6, tree_.Root()->left->right->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->left->label);
+
+  EXPECT_EQ(9, tree_.Root()->right->key);
+  EXPECT_EQ(IntAVLTree::kR, tree_.Root()->left->label);
+
+  EXPECT_EQ(NULL, tree_.Root()->right->left);
+
+  EXPECT_EQ(10, tree_.Root()->right->right->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->right->right->label);
 }
 
 
