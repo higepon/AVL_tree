@@ -31,7 +31,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <vector>
+#include <string>
 #include <algorithm>
+#include <ostream>
 
 template <class KeyType, class ValueType> class AVLTree {
  public:
@@ -55,7 +57,9 @@ template <class KeyType, class ValueType> class AVLTree {
         return;
       } else if (current->key < key) {
         if (current->right == NULL) {
-          current->right = new Node(key, value);
+          Node* node_to_add = new Node(key, value, current);
+          current->right = node_to_add;
+          Balance(node_to_add);
           assert(CheckSanity());
           return;
         } else {
@@ -63,7 +67,9 @@ template <class KeyType, class ValueType> class AVLTree {
         }
       } else {
         if (current->left == NULL) {
-          current->left = new Node(key, value);
+          Node* node_to_add = new Node(key, value, current);
+          current->left = node_to_add;
+          Balance(node_to_add);
           assert(CheckSanity());
           return;
         } else {
@@ -94,7 +100,6 @@ template <class KeyType, class ValueType> class AVLTree {
     return factor == 0 || factor == -1 || factor == 1;
   }
 
-
   bool CheckSanity() const {
     return true;
 // #ifdef MONA
@@ -107,21 +112,103 @@ template <class KeyType, class ValueType> class AVLTree {
 //     return keys == sorted;
 // #endif
   }
+  enum Label {
+    kL,
+    kR,
+    kE
+  };
 
- private:
   struct Node {
-    Node(const KeyType key, ValueType value,
-         Node* left = NULL, Node* right = NULL) :
+    Node(const KeyType key, ValueType value, Node* parent = NULL,
+         Node* left = NULL, Node* right = NULL, Label label = kE) :
         key(key),
         value(value),
+        parent(parent),
         left(left),
-        right(right) {}
+        right(right),
+        label(label)
+    {}
+
+    bool operator==(const Node& n) const {
+      return
+          n.key == key &&
+          n.value == value &&
+          n.parent == parent &&
+          n.left == left &&
+          n.right == right &&
+          n.label == label;
+    }
+
+    bool IsRightChild() const {
+      assert(parent);
+      return parent->right == this;
+    }
 
     KeyType key;
     ValueType value;
+    Node* parent;
     Node* left;
     Node* right;
+    Label label;
   };
+
+  Node* Root() const {
+    return root_;
+  }
+
+  void Balance(Node* n) {
+    assert(n);
+    if (n->parent == NULL) {
+      return;
+    }
+
+    Node* parent = n->parent;
+    if (n->IsRightChild()) {
+      if (parent->label == kE) {
+        parent->label = kR;
+        Balance(parent);
+      } else if (parent->label == kR) {
+        if (n->label == kR) {
+          // left lotation
+          Node* parent_parent = parent->parent;
+          Node* old_root = parent;
+          Node* new_root = n;
+          old_root->label = kE;
+          new_root->label = kE;
+          old_root->right = new_root->left;
+          new_root->left = old_root;
+          if (parent_parent == NULL) {
+            root_ = new_root;
+            new_root->parent = NULL;
+            old_root->parent = new_root;
+          } else {
+            if (old_root->IsRightChild()) {
+              parent_parent->right = new_root;
+              old_root->parent = new_root;
+            } else {
+              parent_parent->left = new_root;
+              old_root->parent = new_root;
+            }
+          }
+        }
+      } else if (parent->label == kL) {
+        parent->label = kE;
+        return;
+      } else {
+        assert(0);
+      }
+    } else {
+      if (parent->label == kE) {
+        parent->label = kL;
+        Balance(parent);
+      } else {
+        assert(0);
+      }
+    }
+  }
+
+
+ private:
 
   int Height(Node* n) const {
     if (n == NULL) {

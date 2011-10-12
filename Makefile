@@ -11,7 +11,7 @@ $(TARGET): $(OBJECTS)
 
 check :all
 	$(TARGET)
-	@gcov test.gcda | grep bst -B2 | grep '%'
+	@gcov test.gcda | grep avl_tree -B2 | grep '%'
 
 .SUFFIXES: .cpp .o
 .cpp.o:
