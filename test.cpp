@@ -108,7 +108,17 @@ TEST_F(AVLTreeTest, DoubleRightRotation) {
   EXPECT_EQ(7, tree_.Root()->right->left->key);
   EXPECT_EQ(IntAVLTree::kE, tree_.Root()->right->left->label);
 
-  // tree_.Add(10, 10);
+  tree_.Add(10, 10);
+  EXPECT_EQ(IntAVLTree::kR, tree_.Root()->label);
+  EXPECT_EQ(3, tree_.Root()->left->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->label);
+  EXPECT_EQ(9, tree_.Root()->right->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->right->label);
+  EXPECT_EQ(7, tree_.Root()->right->left->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->right->left->label);
+  EXPECT_EQ(10, tree_.Root()->right->right->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->right->right->label);
+
   // Node* root = tree_.Root();
   // EXPECT_EQ(IntAVLTree::kR, root->label);
   // EXPECT_EQ(5, root->key);
