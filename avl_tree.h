@@ -33,7 +33,6 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <ostream>
 
 template <class KeyType, class ValueType> class AVLTree {
  public:
@@ -113,9 +112,9 @@ template <class KeyType, class ValueType> class AVLTree {
 // #endif
   }
   enum Label {
-    kL,
-    kR,
-    kE
+    kL = -1,
+    kE = 0,
+    kR = 1
   };
 
   struct Node {
@@ -129,16 +128,6 @@ template <class KeyType, class ValueType> class AVLTree {
         label(label)
     {}
 
-    bool operator==(const Node& n) const {
-      return
-          n.key == key &&
-          n.value == value &&
-          n.parent == parent &&
-          n.left == left &&
-          n.right == right &&
-          n.label == label;
-    }
-
     bool IsRightChild() const {
       assert(parent);
       return parent->right == this;
@@ -149,11 +138,123 @@ template <class KeyType, class ValueType> class AVLTree {
     Node* parent;
     Node* left;
     Node* right;
-    Label label;
+    int label;
   };
 
   Node* Root() const {
     return root_;
+  }
+
+  // http://en.wikipedia.org/wiki/Tree_rotation
+
+  void LeftRotation(Node* n) {
+    Node* old_root = n->parent;
+    Node* new_root = n;
+    old_root->right = new_root->left;
+    new_root->left = old_root;
+    SwapRoot(old_root, new_root);
+    old_root->parent = new_root;
+
+    old_root->label -= (1 + std::max((int)new_root->label, 0));
+    new_root->label -= (1 - std::min((int)old_root->label, 0));
+  }
+
+  void RotateLeft(Node*& root) {
+    Node* old_root = root;
+    root = root->right;
+    old_root->right = root->left;
+    root->left = old_root;
+    // Node* new_root = n;
+    old_root->label = kE;
+    root->label = kE;
+    old_root->parent = root; // todo
+    //    old_root->right = new_root->left;
+    //    new_root->left = old_root;
+    //    SwapRoot(old_root, new_root);
+    //    old_root->parent = new_root;
+  }
+
+
+  void RightRotation(Node* n) {
+    Node* old_root = n->parent;
+    Node* new_root = n;
+    // old_root->label = kE;
+    // new_root->label = kE;
+    old_root->left = new_root->right;
+    new_root->right = old_root;
+    SwapRoot(old_root, new_root);
+    old_root->parent = new_root;
+    old_root->label += (1 - std::min((int)new_root->label, 0));
+    new_root->label += (1 - std::max((int)old_root->label, 0));
+
+  }
+
+
+  void DoubleRightRotation(Node* n) {
+    Node* old_root = n->parent;
+    Node* new_root = n->left;
+    // if (new_root->label == kL) {
+    //   old_root->label = kE;
+    //   n->label = kR;
+    // } else if (new_root->label == kR) {
+    //   old_root->label = kL;
+    //   n->label = kE;
+    // } else {
+    //   old_root->label = kE;
+    //   n->label = kE;
+    // }
+    //    new_root->label = kE;
+    Node* save_n_left_left = n->left->left;
+    n->left = new_root->right;
+    if (new_root->right) {
+      new_root->right->parent = n;
+    }
+    n->parent = new_root;
+    new_root->right = n;
+    new_root->left = old_root;
+    old_root->right = save_n_left_left;
+    if (save_n_left_left != NULL) {
+      save_n_left_left->parent = old_root;
+    }
+    SwapRoot(old_root, new_root);
+    old_root->parent = new_root;
+    new_root->left->label  = -std::max(new_root->label, 0);
+    new_root->right->label = -std::min(new_root->label, 0);
+    new_root->label = kE;
+  }
+
+  void DoubleLeftRotation(Node* n) {
+    Node* old_root = n->parent;
+    Node* new_root = n->right;
+    // if (new_root->label == kL) {
+    //   old_root->label = kR;
+    //   n->label = kE;
+    // } else if (new_root->label == kR) {
+    //   old_root->label = kE;
+    //   n->label = kL;
+    // } else {
+    //   old_root->label = kE;
+    //   n->label = kE;
+    // }
+    // new_root->label = kE;
+    Node* save_n_right_right = n->right->right;
+    n->right = new_root->left;
+    if (new_root->left) {
+      new_root->left->parent = n;
+    }
+    n->parent = new_root;
+    new_root->left = n;
+    new_root->right = old_root;
+    old_root->left = save_n_right_right;
+    if (save_n_right_right != NULL) {
+      save_n_right_right->parent = old_root;
+    }
+    SwapRoot(old_root, new_root);
+    old_root->parent = new_root;
+
+    new_root->left->label  = -std::max(new_root->label, 0);
+    new_root->right->label = -std::min(new_root->label, 0);
+    new_root->label = kE;
   }
 
   void Balance(Node* n) {
@@ -169,69 +270,34 @@ template <class KeyType, class ValueType> class AVLTree {
         Balance(parent);
       } else if (parent->label == kR) {
         if (n->label == kR) {
-          // left rotation
-          Node* parent_parent = parent->parent;
-          Node* old_root = parent;
-          Node* new_root = n;
-          old_root->label = kE;
-          new_root->label = kE;
-          old_root->right = new_root->left;
-          new_root->left = old_root;
-          if (parent_parent == NULL) {
-            root_ = new_root;
-            new_root->parent = NULL;
-            old_root->parent = new_root;
-          } else {
-            if (old_root->IsRightChild()) {
-              parent_parent->right = new_root;
-              old_root->parent = new_root;
-            } else {
-              parent_parent->left = new_root;
-              old_root->parent = new_root;
-            }
-          }
+          n->parent->label++;
+          LeftRotation(n);
+          //          RotateLeft(n->parent);
         } else if (n->label == kL) {
-          // double right rotation
-          Node* old_root_parent = parent->parent;
-          Node* old_root = parent;
-          Node* new_root = n->left;
-          old_root->label = kE;
-          new_root->label = kE;
-          n->label = kR;
-          Node* save_n_left_left = n->left->left;
-          n->left = new_root->right;
-          n->parent = new_root;
-          new_root->right = n;
-          new_root->left = old_root;
-          old_root->right = save_n_left_left;
-          old_root->parent = new_root->parent;
-          if (old_root_parent == NULL) {
-            root_ = new_root;
-            new_root->parent = NULL;
-          } else {
-            if (old_root->IsRightChild()) {
-              old_root_parent->right = new_root;
-              new_root->parent = old_root_parent;
-            } else {
-              old_root_parent->left = new_root;
-              new_root->parent = old_root_parent;
-            }
-          }
+          DoubleRightRotation(n);
         } else {
           assert(0);
         }
-      } else if (parent->label == kL) {
+      } else {
         parent->label = kE;
         return;
-      } else {
-        assert(0);
       }
     } else {
       if (parent->label == kE) {
         parent->label = kL;
         Balance(parent);
+      } else if (parent->label == kL) {
+        if (n->label == kL) {
+          n->parent->label--;
+          RightRotation(n);
+        } else if (n->label == kR) {
+          DoubleLeftRotation(n);
+        } else {
+          assert(0);
+        }
       } else {
-        assert(0);
+        parent->label = kE;
+        return;
       }
     }
   }
@@ -239,11 +305,26 @@ template <class KeyType, class ValueType> class AVLTree {
 
  private:
 
+  void SwapRoot(Node* old_root, Node* new_root) {
+    if (old_root->parent == NULL) {
+      root_ = new_root;
+    } else {
+      if (old_root->IsRightChild()) {
+        old_root->parent->right = new_root;
+      } else {
+        old_root->parent->left = new_root;
+      }
+    }
+    new_root->parent = old_root->parent;
+  }
+
   int Height(Node* n) const {
     if (n == NULL) {
       return 0;
     }
-    return std::max(Height(n->left) + 1, Height(n->right) + 1);
+    int l = Height(n->left);
+    int r = Height(n->right);
+    return std::max(l, r) + 1;
   }
 
   Node* root_;
