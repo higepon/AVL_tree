@@ -332,8 +332,29 @@ template <class KeyType, class ValueType> class AVLTree {
     return Node::Remove(key, root_, cmp);
   }
 
-  Comparable* Get(KeyType key, CompareResult cmp = kEqCmp) {
+  Comparable* Get(const KeyType key, CompareResult cmp = kEqCmp) const {
     return Node::Get(key, root_, cmp);
+  }
+
+  Comparable* GetLowerNearest(const KeyType key) const {
+    Node* last_node_lt_key = NULL;
+    Node* n = root_;
+
+    while (n != NULL) {
+      if (n->item->Key() == key) {
+        return n->item;
+      } else if (n->item->Key() < key) {
+        last_node_lt_key = n;
+        n = n->Right();
+      } else {
+        n = n->Left();
+      }
+    }
+    if (last_node_lt_key == NULL) {
+      return NULL;
+    } else {
+      return last_node_lt_key->item;
+    }
   }
 
   bool IsBalanced() const {
