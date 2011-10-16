@@ -36,19 +36,15 @@ namespace {
 typedef AVLTree<int, int> IntAVLTree;
 typedef IntAVLTree::Node Node;
 
-static void ExpectNodeEq(int expected_key, int expected_parent_key,
-                         IntAVLTree::Label expected_label, Node* node) {
+static void ExpectNodeEq(int expected_key, int8_t expected_factor, Node* node) {
   ASSERT_TRUE(node != NULL);
-  EXPECT_EQ(expected_key, node->key);
-  EXPECT_EQ(expected_label, node->label);
-  if (expected_parent_key != 0) {
-    ASSERT_TRUE(node->parent != NULL);
-    EXPECT_EQ(expected_parent_key, node->parent->key);
-  }
+  EXPECT_EQ(expected_key, node->item->Key());
+  EXPECT_EQ(expected_factor, node->balance_factor);
 }
-#define EXPECT_NODE_EQ(key, parent_key, label, node) { \
+
+#define EXPECT_NODE_EQ(key, factor, node) { \
   SCOPED_TRACE(""); \
-  ExpectNodeEq(key, parent_key, label, node);   \
+  ExpectNodeEq(key, factor, node);   \
 }
 
 class AVLTreeTest : public ::testing::Test {
@@ -63,29 +59,29 @@ class AVLTreeTest : public ::testing::Test {
 
   void MakePreDoubleRightRotationTree() {
     tree_.Add(5, 5);
-    EXPECT_NODE_EQ(5, 0, IntAVLTree::kE, tree_.Root());
+    EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root());
 
     tree_.Add(3, 3);
-    EXPECT_NODE_EQ(5, 0, IntAVLTree::kL, tree_.Root());
-    EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left);
+    EXPECT_NODE_EQ(5, IntAVLTree::kL, tree_.Root());
+    EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left());
 
     tree_.Add(9, 9);
-    EXPECT_NODE_EQ(5, 0, IntAVLTree::kE, tree_.Root());
-    EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left);
-    EXPECT_NODE_EQ(9, 5, IntAVLTree::kE, tree_.Root()->right);
+    EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root());
+    EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left());
+    EXPECT_NODE_EQ(9, IntAVLTree::kE, tree_.Root()->Right());
 
     tree_.Add(7, 7);
-    EXPECT_NODE_EQ(5, 0, IntAVLTree::kR, tree_.Root());
-    EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left);
-    EXPECT_NODE_EQ(9, 5, IntAVLTree::kL, tree_.Root()->right);
-    EXPECT_NODE_EQ(7, 9, IntAVLTree::kE, tree_.Root()->right->left);
+    EXPECT_NODE_EQ(5, IntAVLTree::kR, tree_.Root());
+    EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left());
+    EXPECT_NODE_EQ(9, IntAVLTree::kL, tree_.Root()->Right());
+    EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root()->Right()->Left());
 
     tree_.Add(10, 10);
-    EXPECT_NODE_EQ(5, 0, IntAVLTree::kR, tree_.Root());
-    EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left);
-    EXPECT_NODE_EQ(9, 5, IntAVLTree::kE, tree_.Root()->right);
-    EXPECT_NODE_EQ(7, 9, IntAVLTree::kE, tree_.Root()->right->left);
-    EXPECT_NODE_EQ(10, 9, IntAVLTree::kE, tree_.Root()->right->right);
+    EXPECT_NODE_EQ(5, IntAVLTree::kR, tree_.Root());
+    EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left());
+    EXPECT_NODE_EQ(9, IntAVLTree::kE, tree_.Root()->Right());
+    EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root()->Right()->Left());
+    EXPECT_NODE_EQ(10, IntAVLTree::kE, tree_.Root()->Right()->Right());
   }
 
   void MakePreDoubleLeftRotationTree() {
@@ -95,171 +91,218 @@ class AVLTreeTest : public ::testing::Test {
     tree_.Add(3, 3);
     tree_.Add(7, 7);
 
-    EXPECT_NODE_EQ(9, 0, IntAVLTree::kL, tree_.Root());
-    EXPECT_NODE_EQ(5, 9, IntAVLTree::kE, tree_.Root()->left);
-    EXPECT_NODE_EQ(11, 9, IntAVLTree::kE, tree_.Root()->right);
-    EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left->left);
-    EXPECT_NODE_EQ(7, 5, IntAVLTree::kE, tree_.Root()->left->right);
+    EXPECT_NODE_EQ(9, IntAVLTree::kL, tree_.Root());
+    EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root()->Left());
+    EXPECT_NODE_EQ(11, IntAVLTree::kE, tree_.Root()->Right());
+    EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left()->Left());
+    EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root()->Left()->Right());
   }
 };
 
-
 TEST_F(AVLTreeTest, AddOneNode) {
+  EXPECT_TRUE(tree_.IsBalanced());
   tree_.Add(1, 1);
-  EXPECT_NODE_EQ(1, 0, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(1, IntAVLTree::kE, tree_.Root());
 }
 
 TEST_F(AVLTreeTest, AddTwoNodesRightSide) {
   tree_.Add(3, 3);
   tree_.Add(5, 5);
-  EXPECT_NODE_EQ(3, 0, IntAVLTree::kR, tree_.Root());
-  EXPECT_NODE_EQ(5, 3, IntAVLTree::kE, tree_.Root()->right);
+  EXPECT_NODE_EQ(3, IntAVLTree::kR, tree_.Root());
+  EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root()->Right());
 }
 
 TEST_F(AVLTreeTest, AddThreeNodesRightSide) {
   tree_.Add(3, 3);
   tree_.Add(5, 5);
   tree_.Add(7, 7);
-  EXPECT_NODE_EQ(5, 0, IntAVLTree::kE, tree_.Root());
-  EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left);
-  EXPECT_NODE_EQ(7, 5, IntAVLTree::kE, tree_.Root()->right);
+  EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left());
+  EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root()->Right());
 }
 
 TEST_F(AVLTreeTest, DoubleRightRotation1) {
   MakePreDoubleRightRotationTree();
 
   tree_.Add(6, 6);
-  EXPECT_NODE_EQ(7, 0, IntAVLTree::kE, tree_.Root());
-  EXPECT_NODE_EQ(5, 7, IntAVLTree::kE, tree_.Root()->left);
-  EXPECT_NODE_EQ(9, 7, IntAVLTree::kR, tree_.Root()->right);
-  EXPECT_EQ(NULL, tree_.Root()->right->left);
-  EXPECT_NODE_EQ(10, 9, IntAVLTree::kE, tree_.Root()->right->right);
-  EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left->left);
-  EXPECT_NODE_EQ(6, 5, IntAVLTree::kE, tree_.Root()->left->right);
+  EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root()->Left());
+  EXPECT_NODE_EQ(9, IntAVLTree::kR, tree_.Root()->Right());
+  EXPECT_EQ(NULL, tree_.Root()->Right()->Left());
+  EXPECT_NODE_EQ(10, IntAVLTree::kE, tree_.Root()->Right()->Right());
+  EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left()->Left());
+  EXPECT_NODE_EQ(6,  IntAVLTree::kE, tree_.Root()->Left()->Right());
 }
 
 TEST_F(AVLTreeTest, DoubleRightRotation2) {
   MakePreDoubleRightRotationTree();
 
   tree_.Add(8, 8);
-  EXPECT_NODE_EQ(7, 0, IntAVLTree::kE, tree_.Root());
-  EXPECT_NODE_EQ(5, 7, IntAVLTree::kL, tree_.Root()->left);
-  EXPECT_NODE_EQ(9, 7, IntAVLTree::kE, tree_.Root()->right);
-  EXPECT_NODE_EQ(8, 9, IntAVLTree::kE, tree_.Root()->right->left);
-  EXPECT_NODE_EQ(10, 9, IntAVLTree::kE, tree_.Root()->right->right);
-  EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left->left);
-  EXPECT_EQ(NULL, tree_.Root()->left->right);
+  EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(5, IntAVLTree::kL, tree_.Root()->Left());
+  EXPECT_NODE_EQ(9, IntAVLTree::kE, tree_.Root()->Right());
+  EXPECT_NODE_EQ(8, IntAVLTree::kE, tree_.Root()->Right()->Left());
+  EXPECT_NODE_EQ(10, IntAVLTree::kE, tree_.Root()->Right()->Right());
+  EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left()->Left());
+  EXPECT_EQ(NULL, tree_.Root()->Left()->Right());
 }
 
 TEST_F(AVLTreeTest, DoubleLeftRotation1) {
   MakePreDoubleLeftRotationTree();
 
   tree_.Add(6, 6);
-  EXPECT_NODE_EQ(7, 0, IntAVLTree::kE, tree_.Root());
-  EXPECT_NODE_EQ(5, 7, IntAVLTree::kE, tree_.Root()->left);
-  EXPECT_NODE_EQ(9, 7, IntAVLTree::kR, tree_.Root()->right);
-  EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left->left);
-  EXPECT_NODE_EQ(6, 5, IntAVLTree::kE, tree_.Root()->left->right);
-  EXPECT_EQ(NULL, tree_.Root()->right->left);
-  EXPECT_NODE_EQ(11, 9, IntAVLTree::kE, tree_.Root()->right->right);
+  EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(5, IntAVLTree::kE, tree_.Root()->Left());
+  EXPECT_NODE_EQ(9, IntAVLTree::kR, tree_.Root()->Right());
+  EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left()->Left());
+  EXPECT_NODE_EQ(6, IntAVLTree::kE, tree_.Root()->Left()->Right());
+  EXPECT_EQ(NULL, tree_.Root()->Right()->Left());
+  EXPECT_NODE_EQ(11, IntAVLTree::kE, tree_.Root()->Right()->Right());
 }
 
 TEST_F(AVLTreeTest, DoubleLeftRotation2) {
   MakePreDoubleLeftRotationTree();
 
   tree_.Add(8, 8);
-  EXPECT_NODE_EQ(7, 0, IntAVLTree::kE, tree_.Root());
-  EXPECT_NODE_EQ(5, 7, IntAVLTree::kL, tree_.Root()->left);
-  EXPECT_NODE_EQ(9, 7, IntAVLTree::kE, tree_.Root()->right);
-  EXPECT_NODE_EQ(3, 5, IntAVLTree::kE, tree_.Root()->left->left);
-  EXPECT_EQ(NULL, tree_.Root()->left->right);
-  EXPECT_NODE_EQ(11, 9, IntAVLTree::kE, tree_.Root()->right->right);
-  EXPECT_NODE_EQ(8, 9, IntAVLTree::kE, tree_.Root()->right->left);
+  EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(5, IntAVLTree::kL, tree_.Root()->Left());
+  EXPECT_NODE_EQ(9, IntAVLTree::kE, tree_.Root()->Right());
+  EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root()->Left()->Left());
+  EXPECT_EQ(NULL, tree_.Root()->Left()->Right());
+  EXPECT_NODE_EQ(11, IntAVLTree::kE, tree_.Root()->Right()->Right());
+  EXPECT_NODE_EQ(8, IntAVLTree::kE, tree_.Root()->Right()->Left());
 }
 
 TEST_F(AVLTreeTest, RightRotation) {
   MakePreDoubleRightRotationTree();
 
   tree_.Add(6, 6);
-  EXPECT_NODE_EQ(7, 0, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(7, IntAVLTree::kE, tree_.Root());
 
   tree_.Add(2, 2);
-  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->label);
-  EXPECT_EQ(5, tree_.Root()->left->key);
-  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->left->label);
-  EXPECT_EQ(3, tree_.Root()->left->left->key);
-  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->left->left->label);
-  EXPECT_EQ(2, tree_.Root()->left->left->left->key);
-  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->left->left->label);
+  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->balance_factor);
+  EXPECT_EQ(5, tree_.Root()->Left()->item->Key());
+  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->Left()->balance_factor);
+  EXPECT_EQ(3, tree_.Root()->Left()->Left()->item->Key());
+  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->Left()->Left()->balance_factor);
+  EXPECT_EQ(2, tree_.Root()->Left()->Left()->Left()->item->Key());
+  EXPECT_EQ(IntAVLTree::kE,
+            tree_.Root()->Left()->Left()->Left()->balance_factor);
 
   tree_.Add(1, 1);
-  EXPECT_EQ(7, tree_.Root()->key);
-  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->label);
+  EXPECT_EQ(7, tree_.Root()->item->Key());
+  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->balance_factor);
 
-  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->left->label);
-  EXPECT_EQ(5, tree_.Root()->left->key);
+  EXPECT_EQ(IntAVLTree::kL, tree_.Root()->Left()->balance_factor);
+  EXPECT_EQ(5, tree_.Root()->Left()->item->Key());
 
-  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->left->label);
-  EXPECT_EQ(2, tree_.Root()->left->left->key);
+  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->Left()->Left()->balance_factor);
+  EXPECT_EQ(2, tree_.Root()->Left()->Left()->item->Key());
 
-  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->left->left->label);
-  EXPECT_EQ(1, tree_.Root()->left->left->left->key);
+  EXPECT_EQ(IntAVLTree::kE,
+            tree_.Root()->Left()->Left()->Left()->balance_factor);
+  EXPECT_EQ(1, tree_.Root()->Left()->Left()->Left()->item->Key());
 
-  EXPECT_EQ(IntAVLTree::kE, tree_.Root()->left->left->right->label);
-  EXPECT_EQ(3, tree_.Root()->left->left->right->key);
+  EXPECT_EQ(IntAVLTree::kE,
+            tree_.Root()->Left()->Left()->Right()->balance_factor);
+  EXPECT_EQ(3, tree_.Root()->Left()->Left()->Right()->item->Key());
 }
 
-// TEST_F(AVLTreeTest, InsertMany) {
-//   const int kN = 1000;
-//   for (int i = 1; i <= kN; i++) {
-//     tree_.Add(i, i);
-//     ASSERT_TRUE(tree_.IsBalanced());
-//   }
-// }
+TEST_F(AVLTreeTest, InsertMany) {
+  const int kN = 1000;
+  for (int i = 1; i <= kN; i++) {
+    tree_.Add(i, i);
+    ASSERT_TRUE(tree_.IsBalanced());
+  }
+}
 
 TEST_F(AVLTreeTest, Regression) {
   tree_.Add(2, 2);
-  EXPECT_NODE_EQ(2, 0, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(2, IntAVLTree::kE, tree_.Root());
 
   tree_.Add(4, 4);
-  EXPECT_NODE_EQ(2, 0, IntAVLTree::kR, tree_.Root());
-  EXPECT_NODE_EQ(4, 2, IntAVLTree::kE, tree_.Root()->right);
+  EXPECT_NODE_EQ(2, IntAVLTree::kR, tree_.Root());
+  EXPECT_NODE_EQ(4, IntAVLTree::kE, tree_.Root()->Right());
 
   tree_.Add(3, 3);
-  EXPECT_NODE_EQ(3, 0, IntAVLTree::kE, tree_.Root());
-  EXPECT_NODE_EQ(2, 3, IntAVLTree::kE, tree_.Root()->left);
-  EXPECT_NODE_EQ(4, 3, IntAVLTree::kE, tree_.Root()->right);
+  EXPECT_NODE_EQ(3, IntAVLTree::kE, tree_.Root());
+  EXPECT_NODE_EQ(2, IntAVLTree::kE, tree_.Root()->Left());
+  EXPECT_NODE_EQ(4, IntAVLTree::kE, tree_.Root()->Right());
   tree_.Add(1, 1);
 }
 
-// TEST_F(AVLTreeTest, Regression2) {
-//   tree_.Add(364, 2);
-//   tree_.Add(919, 2);
-//   tree_.Add(915, 2);
-//   tree_.Add(825, 2);
-//   tree_.Add(560, 2);
-//   tree_.Add(449, 2);
-//   tree_.Add(425, 2);
-//   tree_.Add(160, 2);
-//   tree_.Add(409, 2);
-//   tree_.Add(423, 2);
-//   tree_.Add(727, 2);
-//   tree_.IsBalanced();
-// }
+TEST_F(AVLTreeTest, Regression2) {
+  tree_.Add(364, 2);
+  tree_.Add(919, 2);
+  tree_.Add(915, 2);
+  tree_.Add(825, 2);
+  tree_.Add(560, 2);
+  tree_.Add(449, 2);
+  tree_.Add(425, 2);
+  tree_.Add(160, 2);
+  tree_.Add(409, 2);
+  tree_.Add(423, 2);
+  tree_.Add(727, 2);
+  EXPECT_TRUE(tree_.IsBalanced());
+}
 
-// TEST_F(AVLTreeTest, InsertRandom) {
-//   srand(time(NULL));
-//   const int kN = 1000;
-//   for (int i = 1; i <= kN; i++) {
-//     int v = rand() % 1000;
-//     printf("v=%d\n", v);
-//     tree_.Add(v, v);
-//     ASSERT_TRUE(tree_.IsBalanced());
-//   }
-// }
+TEST_F(AVLTreeTest, InsertRandom) {
+  srand(time(NULL));
+  const int kN = 1000;
+  for (int i = 1; i <= kN; i++) {
+    int v = rand() % 1000; // NOLINT
+    tree_.Add(v, v);
+    ASSERT_TRUE(tree_.IsBalanced());
+  }
+}
+
+TEST_F(AVLTreeTest, DeleteOnlyOne) {
+  tree_.Add(1, 1);
+  tree_.Remove(1);
+  EXPECT_TRUE(tree_.IsEmpty());
+}
+
+TEST_F(AVLTreeTest, RemoveMany) {
+  tree_.Add(364, 2);
+  tree_.Add(919, 2);
+  tree_.Add(915, 2);
+  tree_.Add(825, 2);
+  tree_.Add(560, 2);
+  tree_.Add(449, 2);
+  tree_.Add(425, 2);
+  tree_.Add(160, 2);
+  tree_.Add(409, 2);
+  tree_.Add(423, 2);
+  tree_.Add(727, 2);
+  tree_.Remove(9999);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(364);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(825);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(915);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(919);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(560);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(449);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(425);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(160);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(423);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(409);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(727);
+  EXPECT_TRUE(tree_.IsBalanced());
+  tree_.Remove(727);
+}
+
 
 // todo
-// destructor
 // delete
 
 

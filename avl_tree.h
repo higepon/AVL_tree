@@ -1,5 +1,6 @@
 /*
  *   Copyright (c) 2011 Higepon(Taro Minowa) <higepon@users.sourceforge.jp>
+ *                      Brad Appleton <bradapp@enteract.com>
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions
@@ -28,302 +29,347 @@
 #ifndef AVL_TREE_H_
 #define AVL_TREE_H_
 
+// Based on AvlTrees by Brad Appleton <bradapp@enteract.com>.
+// See LICENSE_AvlTrees.txt
+
 #include <stdlib.h>
 #include <assert.h>
 #include <vector>
 #include <string>
 #include <algorithm>
 
+enum CompareResult {
+  kMinCmp = -1,
+  kEqCmp = 0,
+  kMaxCmp = 1
+};
+
+enum Direction {
+  kLeft = 0,
+  kRight = 1
+};
+
 template <class KeyType, class ValueType> class AVLTree {
+ private:
+  class Comparable {
+   private:
+    KeyType key;
+    ValueType value;
+
+   public:
+    Comparable(KeyType key, ValueType value) : key(key), value(value) {}
+
+    CompareResult Compare(KeyType key) const {
+      return (key == this->key) ? kEqCmp
+          : ((key < this->key) ? kMinCmp : kMaxCmp);
+    }
+
+    KeyType Key() const {
+      return  key;
+    }
+
+    ValueType Value() const {
+      return value;
+    }
+
+    void SetValue(ValueType v) {
+      value = v;
+    }
+  };
+
  public:
-  AVLTree() : root_(NULL) {
-  }
 
-  virtual ~AVLTree() {
-  }
-
-  void Add(const KeyType key, ValueType value) {
-    if (root_ == NULL) {
-      root_ = new Node(key, value);
-      assert(CheckSanity());
-      return;
-    }
-
-    for (Node* current = root_;;) {
-      if (current->key == key) {
-        current->value = value;
-        assert(CheckSanity());
-        return;
-      } else if (current->key < key) {
-        if (current->right == NULL) {
-          Node* node_to_add = new Node(key, value, current);
-          current->right = node_to_add;
-          Balance(node_to_add);
-          assert(CheckSanity());
-          return;
-        } else {
-          current = current->right;
-        }
-      } else {
-        if (current->left == NULL) {
-          Node* node_to_add = new Node(key, value, current);
-          current->left = node_to_add;
-          Balance(node_to_add);
-          assert(CheckSanity());
-          return;
-        } else {
-          current = current->left;
-        }
-      }
-    }
-  }
-
-  ValueType GetLowerNearest(const KeyType key) const {
-  }
-
-  ValueType Get(const KeyType key, bool* found = NULL) const {
-  }
-
-  void Remove(const KeyType key, bool* removed = NULL) {
-  }
-
-  int BalanceFactor() const {
-    if (root_ == NULL) {
-      return 0;
-    }
-    return Height(root_->left) - Height(root_->right);
-  }
-
-  bool IsBalanced() const {
-    int factor = BalanceFactor();
-    return factor == 0 || factor == -1 || factor == 1;
-  }
-
-  bool CheckSanity() const {
-    return true;
-// #ifdef MONA
-//     return true;
-// #else
-//     std::vector<T> keys;
-//     GetInOrder(root_, &keys);
-//     std::vector<T> sorted = keys;
-//     sort(keys.begin(), keys.end());
-//     return keys == sorted;
-// #endif
-  }
-  enum Label {
-    kL = -1,
+  enum BalanceFactor {
     kE = 0,
+    kL = -1,
     kR = 1
   };
 
   struct Node {
-    Node(const KeyType key, ValueType value, Node* parent = NULL,
-         Node* left = NULL, Node* right = NULL, Label label = kE) :
-        key(key),
-        value(value),
-        parent(parent),
-        left(left),
-        right(right),
-        label(label)
-    {}
-
-    bool IsRightChild() const {
-      assert(parent);
-      return parent->right == this;
+    explicit Node(Comparable* item) :
+        item(item),
+        balance_factor(kE) {
+      children[kLeft] = NULL;
+      children[kRight] = NULL;
     }
 
-    KeyType key;
-    ValueType value;
-    Node* parent;
-    Node* left;
-    Node* right;
-    int label;
+    ~Node() {
+      if (Left()) {
+        delete Left();
+      }
+      if (Right()) {
+        delete Right();
+      }
+    }
+
+    bool IsLeftImbalance() const {
+      return balance_factor < kL;
+    }
+
+    bool IsRightImbalance() const {
+      return balance_factor > kR;
+    }
+
+    Node* Right() const {
+      return children[kRight];
+    }
+
+    Node* Left() const {
+      return children[kLeft];
+    }
+
+    static Direction Opposite(Direction dir) {
+      return static_cast<Direction>(1 - static_cast<int>(dir));
+    }
+
+    static int RotateOnce(Node*& root, Direction dir) {
+      Direction other_dir = Opposite(dir);
+      Node* oldRoot = root;
+
+      // See if otherDir subtree is balanced. If it is, then this
+      // rotation will *not* change the overall tree height.
+      // Otherwise, this rotation will shorten the tree height.
+      int  height_change = (root->children[other_dir]->balance_factor == 0)
+          ? kHeightNoChange : kHeightChange;
+
+      // assign new root
+      root = oldRoot->children[other_dir];
+
+      // new-root exchanges it's "dir" mySubtree for it's parent
+      oldRoot->children[other_dir] = root->children[dir];
+      root->children[dir] = oldRoot;
+
+      // update balances
+      oldRoot->balance_factor =
+          -((dir == kLeft) ?
+            --(root->balance_factor) : ++(root->balance_factor));
+
+      return  height_change;
+    }
+
+    static int RotateTwice(Node*& root, Direction dir) {
+      Direction other_dir = Opposite(dir);
+      Node* old_root = root;
+      Node* old_other_dir_subtree = root->children[other_dir];
+
+      // assign new root
+      root = old_root->children[other_dir]->children[dir];
+
+      // new-root exchanges it's "dir" mySubtree for it's grandparent
+      old_root->children[other_dir] = root->children[dir];
+      root->children[dir] = old_root;
+
+      // new-root exchanges it's "other-dir" mySubtree for it's parent
+      old_other_dir_subtree->children[dir] = root->children[other_dir];
+      root->children[other_dir] = old_other_dir_subtree;
+
+      // update balances
+      root->Left()->balance_factor =
+          -std::max(static_cast<int>(root->balance_factor), 0);
+      root->Right()->balance_factor =
+          -std::min(static_cast<int>(root->balance_factor), 0);
+      root->balance_factor = 0;
+
+      // A double rotation always shortens the overall height of the tree
+      return kHeightChange;
+    }
+
+    static Comparable* Insert(Comparable* item, Node*& root) {
+      int change;
+      return Insert(item, root, change);
+    }
+
+    static Comparable* Insert(Comparable* item, Node*& root, int& change) { // NOLINT
+      if (root == NULL) {
+        root = new Node(item);
+        change = kHeightChange;
+        return NULL;
+      }
+
+      Comparable* found = NULL;
+      CompareResult result = root->Compare(item->Key());
+      Direction dir = (result == kMinCmp) ? kLeft : kRight;
+
+      int increase = 0;
+      if (result != kEqCmp) {
+        found = Insert(item, root->children[dir], change);
+        if (found) {
+          return found;
+        }
+        increase = result * change;
+      } else  {
+        increase = kHeightNoChange;
+        return root->item;
+      }
+
+      root->balance_factor += increase;
+      change = (increase && root->balance_factor)
+          ? (1 - ReBalance(root)) : kHeightNoChange;
+      return NULL;
+    }
+
+    static int ReBalance(Node*& root) {
+      int height_change = kHeightNoChange;
+
+      if (root->IsLeftImbalance()) {
+        // Need a right rotation
+        if (root->Left()->balance_factor == kR) {
+          // RL rotation needed
+          height_change = RotateTwice(root, kRight);
+        } else {
+          // RR rotation needed
+          height_change = RotateOnce(root, kRight);
+        }
+      } else if (root->IsRightImbalance()) {
+        // Need a left rotation
+        if (root->Right()->balance_factor == kL) {
+          // LR rotation needed
+          height_change = RotateTwice(root, kLeft);
+        } else {
+          // LL rotation needed
+          height_change = RotateOnce(root, kLeft);
+        }
+      }
+
+      return height_change;
+    }
+
+    static Comparable* Remove(KeyType key, Node*& root, CompareResult cmp) {
+      int change;
+      return Remove(key, root, change, cmp);
+    }
+
+    static Comparable* Remove(const KeyType key,
+                              Node*& root,
+                              int& change,
+                              CompareResult cmp) {
+      if (root == NULL) {
+        // Key not found
+        change = kHeightNoChange;
+        return NULL;
+      }
+
+      Comparable* found = NULL;
+      int decrease = 0;
+
+      CompareResult result = root->Compare(key, cmp);
+      Direction dir = (result == kMinCmp) ? kLeft : kRight;
+
+      if (result != kEqCmp) {
+        found = Remove(key, root->children[dir], change, cmp);
+        if (!found) {
+          return found;
+        }
+        decrease = result * change;
+      } else  {
+        found = root->item;
+        if ((root->Left() == NULL) &&
+            (root->Right() == NULL)) {
+          delete root;
+          root = NULL;
+          change = kHeightChange;
+          return  found;
+        } else if ((root->Left() == NULL) ||
+                   (root->Right() == NULL)) {
+          Node* toDelete = root;
+          root = root->children[(root->Right()) ? kRight : kLeft];
+          change = kHeightChange;
+          toDelete->children[kLeft] = toDelete->children[kRight] = NULL;
+          delete  toDelete;
+          return  found;
+        } else {
+          root->item = Remove(key, root->children[kRight],
+                              decrease, kMinCmp);
+        }
+      }
+      root->balance_factor -= decrease;
+
+      if (decrease) {
+        if (root->balance_factor) {
+          change = ReBalance(root);
+        } else {
+          change = kHeightChange;
+        }
+      } else {
+        change = kHeightNoChange;
+      }
+      return  found;
+    }
+
+
+    CompareResult Compare(KeyType key, CompareResult cmp = kEqCmp) const {
+      switch (cmp) {
+        case kEqCmp:
+          return item->Compare(key);
+        case kMinCmp:
+          return  (children[kLeft] == NULL) ? kEqCmp : kMinCmp;
+        default:
+          assert(cmp == kMaxCmp);
+          return (children[kRight] == NULL) ? kEqCmp : kMaxCmp;
+      }
+    }
+
+
+    Node* children[2];
+    Comparable* item;
+    int8_t balance_factor;
+
+   private:
+    Node() {}
+    Node(const Node& n) {}
+    Node & operator=(const Node&) {}
   };
+
+  AVLTree() : root_(NULL) {
+  }
+
+  virtual ~AVLTree() {
+    if (root_) {
+      delete root_;
+    }
+  }
 
   Node* Root() const {
     return root_;
   }
 
-  // http://en.wikipedia.org/wiki/Tree_rotation
-
-  void LeftRotation(Node* n) {
-    Node* old_root = n->parent;
-    Node* new_root = n;
-    old_root->right = new_root->left;
-    new_root->left = old_root;
-    SwapRoot(old_root, new_root);
-    old_root->parent = new_root;
-
-    old_root->label -= (1 + std::max((int)new_root->label, 0));
-    new_root->label -= (1 - std::min((int)old_root->label, 0));
-  }
-
-  void RotateLeft(Node*& root) {
-    Node* old_root = root;
-    root = root->right;
-    old_root->right = root->left;
-    root->left = old_root;
-    // Node* new_root = n;
-    old_root->label = kE;
-    root->label = kE;
-    old_root->parent = root; // todo
-    //    old_root->right = new_root->left;
-    //    new_root->left = old_root;
-    //    SwapRoot(old_root, new_root);
-    //    old_root->parent = new_root;
-  }
-
-
-  void RightRotation(Node* n) {
-    Node* old_root = n->parent;
-    Node* new_root = n;
-    // old_root->label = kE;
-    // new_root->label = kE;
-    old_root->left = new_root->right;
-    new_root->right = old_root;
-    SwapRoot(old_root, new_root);
-    old_root->parent = new_root;
-    old_root->label += (1 - std::min((int)new_root->label, 0));
-    new_root->label += (1 - std::max((int)old_root->label, 0));
-
-  }
-
-
-  void DoubleRightRotation(Node* n) {
-    Node* old_root = n->parent;
-    Node* new_root = n->left;
-    // if (new_root->label == kL) {
-    //   old_root->label = kE;
-    //   n->label = kR;
-    // } else if (new_root->label == kR) {
-    //   old_root->label = kL;
-    //   n->label = kE;
-    // } else {
-    //   old_root->label = kE;
-    //   n->label = kE;
-    // }
-    //    new_root->label = kE;
-    Node* save_n_left_left = n->left->left;
-    n->left = new_root->right;
-    if (new_root->right) {
-      new_root->right->parent = n;
-    }
-    n->parent = new_root;
-    new_root->right = n;
-    new_root->left = old_root;
-    old_root->right = save_n_left_left;
-    if (save_n_left_left != NULL) {
-      save_n_left_left->parent = old_root;
-    }
-    SwapRoot(old_root, new_root);
-    old_root->parent = new_root;
-    new_root->left->label  = -std::max(new_root->label, 0);
-    new_root->right->label = -std::min(new_root->label, 0);
-    new_root->label = kE;
-  }
-
-  void DoubleLeftRotation(Node* n) {
-    Node* old_root = n->parent;
-    Node* new_root = n->right;
-    // if (new_root->label == kL) {
-    //   old_root->label = kR;
-    //   n->label = kE;
-    // } else if (new_root->label == kR) {
-    //   old_root->label = kE;
-    //   n->label = kL;
-    // } else {
-    //   old_root->label = kE;
-    //   n->label = kE;
-    // }
-    // new_root->label = kE;
-    Node* save_n_right_right = n->right->right;
-    n->right = new_root->left;
-    if (new_root->left) {
-      new_root->left->parent = n;
-    }
-    n->parent = new_root;
-    new_root->left = n;
-    new_root->right = old_root;
-    old_root->left = save_n_right_right;
-    if (save_n_right_right != NULL) {
-      save_n_right_right->parent = old_root;
-    }
-    SwapRoot(old_root, new_root);
-    old_root->parent = new_root;
-
-    new_root->left->label  = -std::max(new_root->label, 0);
-    new_root->right->label = -std::min(new_root->label, 0);
-    new_root->label = kE;
-  }
-
-  void Balance(Node* n) {
-    assert(n);
-    if (n->parent == NULL) {
-      return;
-    }
-
-    Node* parent = n->parent;
-    if (n->IsRightChild()) {
-      if (parent->label == kE) {
-        parent->label = kR;
-        Balance(parent);
-      } else if (parent->label == kR) {
-        if (n->label == kR) {
-          n->parent->label++;
-          LeftRotation(n);
-          //          RotateLeft(n->parent);
-        } else if (n->label == kL) {
-          DoubleRightRotation(n);
-        } else {
-          assert(0);
-        }
-      } else {
-        parent->label = kE;
-        return;
-      }
-    } else {
-      if (parent->label == kE) {
-        parent->label = kL;
-        Balance(parent);
-      } else if (parent->label == kL) {
-        if (n->label == kL) {
-          n->parent->label--;
-          RightRotation(n);
-        } else if (n->label == kR) {
-          DoubleLeftRotation(n);
-        } else {
-          assert(0);
-        }
-      } else {
-        parent->label = kE;
-        return;
-      }
+  void Add(const KeyType key, const ValueType value) {
+    Comparable* item = new Comparable(key, value);
+    Comparable* result = Node::Insert(item, root_);
+    if (result) {
+      result->SetValue(value);
+      delete item;
     }
   }
 
+  Comparable* Remove(const KeyType key, CompareResult cmp = kEqCmp) {
+    return Node::Remove(key, root_, cmp);
+  }
+
+  bool IsBalanced() const {
+    if (root_ == NULL) {
+      return true;
+    }
+    int diff = abs(Height(root_->Left()) - Height(root_->Right()));
+    return diff <= 1;
+  }
+
+  bool IsEmpty() const {
+    return root_ == NULL;
+  }
 
  private:
-
-  void SwapRoot(Node* old_root, Node* new_root) {
-    if (old_root->parent == NULL) {
-      root_ = new_root;
-    } else {
-      if (old_root->IsRightChild()) {
-        old_root->parent->right = new_root;
-      } else {
-        old_root->parent->left = new_root;
-      }
-    }
-    new_root->parent = old_root->parent;
-  }
+  enum HeightEffect {
+    kHeightNoChange = 0,
+    kHeightChange = 1
+  };
 
   int Height(Node* n) const {
     if (n == NULL) {
       return 0;
     }
-    int l = Height(n->left);
-    int r = Height(n->right);
+    int l = Height(n->Left());
+    int r = Height(n->Right());
     return std::max(l, r) + 1;
   }
 
