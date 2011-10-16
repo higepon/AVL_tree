@@ -63,7 +63,7 @@ template <class KeyType, class ValueType> class AVLTree {
     }
 
     KeyType Key() const {
-      return  key;
+      return key;
     }
 
     ValueType Value() const {
@@ -122,23 +122,17 @@ template <class KeyType, class ValueType> class AVLTree {
 
     static int RotateOnce(Node*& root, Direction dir) {
       Direction other_dir = Opposite(dir);
-      Node* oldRoot = root;
+      Node* old_root = root;
 
-      // See if otherDir subtree is balanced. If it is, then this
-      // rotation will *not* change the overall tree height.
-      // Otherwise, this rotation will shorten the tree height.
-      int  height_change = (root->children[other_dir]->balance_factor == 0)
+      int height_change = (root->children[other_dir]->balance_factor == 0)
           ? kHeightNoChange : kHeightChange;
 
-      // assign new root
-      root = oldRoot->children[other_dir];
+      root = old_root->children[other_dir];
 
-      // new-root exchanges it's "dir" mySubtree for it's parent
-      oldRoot->children[other_dir] = root->children[dir];
-      root->children[dir] = oldRoot;
+      old_root->children[other_dir] = root->children[dir];
+      root->children[dir] = old_root;
 
-      // update balances
-      oldRoot->balance_factor =
+      old_root->balance_factor =
           -((dir == kLeft) ?
             --(root->balance_factor) : ++(root->balance_factor));
 
@@ -150,25 +144,20 @@ template <class KeyType, class ValueType> class AVLTree {
       Node* old_root = root;
       Node* old_other_dir_subtree = root->children[other_dir];
 
-      // assign new root
       root = old_root->children[other_dir]->children[dir];
 
-      // new-root exchanges it's "dir" mySubtree for it's grandparent
       old_root->children[other_dir] = root->children[dir];
       root->children[dir] = old_root;
 
-      // new-root exchanges it's "other-dir" mySubtree for it's parent
       old_other_dir_subtree->children[dir] = root->children[other_dir];
       root->children[other_dir] = old_other_dir_subtree;
 
-      // update balances
       root->Left()->balance_factor =
           -std::max(static_cast<int>(root->balance_factor), 0);
       root->Right()->balance_factor =
           -std::min(static_cast<int>(root->balance_factor), 0);
       root->balance_factor = 0;
 
-      // A double rotation always shortens the overall height of the tree
       return kHeightChange;
     }
 
@@ -210,21 +199,15 @@ template <class KeyType, class ValueType> class AVLTree {
       int height_change = kHeightNoChange;
 
       if (root->IsLeftImbalance()) {
-        // Need a right rotation
         if (root->Left()->balance_factor == kR) {
-          // RL rotation needed
           height_change = RotateTwice(root, kRight);
         } else {
-          // RR rotation needed
           height_change = RotateOnce(root, kRight);
         }
       } else if (root->IsRightImbalance()) {
-        // Need a left rotation
         if (root->Right()->balance_factor == kL) {
-          // LR rotation needed
           height_change = RotateTwice(root, kLeft);
         } else {
-          // LL rotation needed
           height_change = RotateOnce(root, kLeft);
         }
       }
@@ -242,7 +225,6 @@ template <class KeyType, class ValueType> class AVLTree {
                               int& change,
                               CompareResult cmp) {
       if (root == NULL) {
-        // Key not found
         change = kHeightNoChange;
         return NULL;
       }
@@ -294,7 +276,6 @@ template <class KeyType, class ValueType> class AVLTree {
       return  found;
     }
 
-
     CompareResult Compare(KeyType key, CompareResult cmp = kEqCmp) const {
       switch (cmp) {
         case kEqCmp:
@@ -306,7 +287,6 @@ template <class KeyType, class ValueType> class AVLTree {
           return (children[kRight] == NULL) ? kEqCmp : kMaxCmp;
       }
     }
-
 
     Node* children[2];
     Comparable* item;
