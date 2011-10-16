@@ -36,12 +36,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-enum CompareResult {
-  kMinCmp = -1,
-  kEqCmp = 0,
-  kMaxCmp = 1
-};
-
 enum Direction {
   kLeft = 0,
   kRight = 1
@@ -49,6 +43,12 @@ enum Direction {
 
 template <class KeyType, class ValueType> class AVLTree {
  private:
+  enum CompareResult {
+    kMinCmp = -1,
+    kEqCmp = 0,
+    kMaxCmp = 1
+  };
+
   class Comparable {
    private:
     KeyType key;
