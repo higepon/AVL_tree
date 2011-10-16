@@ -30,6 +30,7 @@
 #define AVL_TREE_H_
 
 // Based on AvlTrees by Brad Appleton <bradapp@enteract.com>.
+// http://www.cmcrossroads.com/bradapp/ftp/src/libs/C++/AvlTrees.html
 // See LICENSE_AvlTrees.txt
 
 #include <stdlib.h>
