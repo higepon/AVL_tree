@@ -6,6 +6,7 @@ See test.cpp. The test code depends on google test (http://code.google.com/p/goo
 
 ## Author
 Based on AvlTrees by Brad Appleton <bradapp@enteract.com>.
+
 * Taro Minowa(Higepon)
 
 ## License
