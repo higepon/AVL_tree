@@ -33,9 +33,6 @@
 // http://www.cmcrossroads.com/bradapp/ftp/src/libs/C++/AvlTrees.html
 // See LICENSE_AvlTrees.txt
 
-#include <stdlib.h>
-#include <assert.h>
-
 template <class KeyType, class ValueType> class AVLTree {
  private:
   enum CompareResult {
@@ -48,6 +45,8 @@ template <class KeyType, class ValueType> class AVLTree {
     kLeft = 0,
     kRight = 1
   };
+
+ public:
 
   class Comparable {
    private:
@@ -74,8 +73,6 @@ template <class KeyType, class ValueType> class AVLTree {
       value = v;
     }
   };
-
- public:
 
   enum BalanceFactor {
     kE = 0,
@@ -139,6 +136,14 @@ template <class KeyType, class ValueType> class AVLTree {
       return  height_change;
     }
 
+    static int min(int a, int b) {
+      return  (a < b) ? a : b;
+    }
+
+    static int max(int a, int b) {
+      return  (a > b) ? a : b;
+    }
+
     static int RotateTwice(Node*& root, Direction dir) {
       Direction other_dir = Opposite(dir);
       Node* old_root = root;
@@ -153,9 +158,9 @@ template <class KeyType, class ValueType> class AVLTree {
       root->children[other_dir] = old_other_dir_subtree;
 
       root->Left()->balance_factor =
-          -std::max(static_cast<int>(root->balance_factor), 0);
+          -max(static_cast<int>(root->balance_factor), 0);
       root->Right()->balance_factor =
-          -std::min(static_cast<int>(root->balance_factor), 0);
+          -min(static_cast<int>(root->balance_factor), 0);
       root->balance_factor = 0;
 
       return kHeightChange;
@@ -291,14 +296,13 @@ template <class KeyType, class ValueType> class AVLTree {
         case kMinCmp:
           return  (children[kLeft] == NULL) ? kEqCmp : kMinCmp;
         default:
-          assert(cmp == kMaxCmp);
           return (children[kRight] == NULL) ? kEqCmp : kMaxCmp;
       }
     }
 
     Node* children[2];
     Comparable* item;
-    int8_t balance_factor;
+    int balance_factor;
 
    private:
     Node() {}
@@ -381,7 +385,7 @@ template <class KeyType, class ValueType> class AVLTree {
     }
     int l = Height(n->Left());
     int r = Height(n->Right());
-    return std::max(l, r) + 1;
+    return Node::max(l, r) + 1;
   }
 
   Node* root_;
