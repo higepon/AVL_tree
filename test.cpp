@@ -100,8 +100,10 @@ class AVLTreeTest : public ::testing::Test {
 };
 
 TEST_F(AVLTreeTest, AddOneNode) {
+  EXPECT_EQ(NULL, tree_.Get(1));
   EXPECT_TRUE(tree_.IsBalanced());
   tree_.Add(1, 1);
+  EXPECT_EQ(1, tree_.Get(1)->Value());
   EXPECT_NODE_EQ(1, IntAVLTree::kE, tree_.Root());
 }
 
@@ -271,7 +273,7 @@ TEST_F(AVLTreeTest, RemoveMany) {
   tree_.Add(449, 2);
   tree_.Add(425, 2);
   tree_.Add(160, 2);
-  tree_.Add(409, 2);
+  tree_.Add(409, 409);
   tree_.Add(423, 2);
   tree_.Add(727, 2);
   tree_.Remove(9999);
@@ -294,17 +296,13 @@ TEST_F(AVLTreeTest, RemoveMany) {
   EXPECT_TRUE(tree_.IsBalanced());
   tree_.Remove(423);
   EXPECT_TRUE(tree_.IsBalanced());
+  EXPECT_EQ(409, tree_.Get(409)->Value());
   tree_.Remove(409);
   EXPECT_TRUE(tree_.IsBalanced());
   tree_.Remove(727);
   EXPECT_TRUE(tree_.IsBalanced());
   tree_.Remove(727);
 }
-
-
-// todo
-// delete
-
 
 }  // namespace
 

@@ -161,6 +161,14 @@ template <class KeyType, class ValueType> class AVLTree {
       return kHeightChange;
     }
 
+    static Comparable* Get(KeyType key, Node* root, CompareResult cmp) {
+      CompareResult result;
+      while (root &&  (result = root->Compare(key, cmp))) {
+        root = root->children[(result < 0) ? kLeft : kRight];
+      }
+      return root ? root->item : NULL;
+    }
+
     static Comparable* Insert(Comparable* item, Node*& root) {
       int change;
       return Insert(item, root, change);
@@ -322,6 +330,10 @@ template <class KeyType, class ValueType> class AVLTree {
 
   Comparable* Remove(const KeyType key, CompareResult cmp = kEqCmp) {
     return Node::Remove(key, root_, cmp);
+  }
+
+  Comparable* Get(KeyType key, CompareResult cmp = kEqCmp) {
+    return Node::Get(key, root_, cmp);
   }
 
   bool IsBalanced() const {
