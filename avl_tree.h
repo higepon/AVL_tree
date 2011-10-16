@@ -35,9 +35,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <vector>
-#include <string>
-#include <algorithm>
 
 enum CompareResult {
   kMinCmp = -1,
